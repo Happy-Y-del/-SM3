@@ -1,0 +1,23 @@
+// 分组扩展模块：将512bit分组扩展为68个W和64个W'
+void sm3_expand(const uint8_t* block, uint32_t W[68], uint32_t W1[64]) {
+    // 步骤1：初始化W[0]-W[15]（大端字节流→32位字）
+    for (int j = 0; j < 16; j++) {
+        W[j] = (uint32_t)block[j * 4] << 24  // 第j个32位字的第1个字节（大端高位）
+            | (uint32_t)block[j * 4 + 1] << 16
+            | (uint32_t)block[j * 4 + 2] << 8
+            | (uint32_t)block[j * 4 + 3];   // 第j个32位字的第4个字节（大端低位）
+    }
+
+    // 步骤2：计算W[16]-W[67]（遵循标准公式）
+    for (int j = 16; j < 68; j++) {
+        uint32_t temp = W[j - 16] ^ W[j - 9] ^ sm3_rotl(W[j - 3], 15);
+        temp = sm3_P1(temp);
+        temp ^= sm3_rotl(W[j - 13], 7) ^ W[j - 6];
+        W[j] = temp;
+    }
+
+    // 步骤3：计算W'[0]-W'[63]（W'_j = W_j ^ W_j+4）
+    for (int j = 0; j < 64; j++) {
+        W1[j] = W[j] ^ W[j + 4];
+    }
+}
