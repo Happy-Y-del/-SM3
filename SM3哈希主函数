@@ -1,0 +1,35 @@
+// SM3哈希主函数：输入→填充→分块压缩→哈希值
+uint8_t* sm3_hash(const uint8_t* input, size_t input_len, size_t* hash_len) {
+    *hash_len = SM3_HASH_SIZE;  // 固定输出32字节
+    uint8_t* hash = (uint8_t*)malloc(*hash_len);
+    if (hash == NULL) return NULL;
+
+    // 步骤1：消息填充
+    uint8_t* padded_input = NULL;
+    size_t padded_len = 0;
+    sm3_pad(input, input_len, &padded_input, &padded_len);
+    if (padded_input == NULL || padded_len == 0) {
+        free(hash);
+        return NULL;
+    }
+
+    // 步骤2：初始化IV
+    uint32_t IV[SM3_IV_SIZE];
+    memcpy(IV, SM3_IV, sizeof(SM3_IV));
+
+    // 步骤3：分块压缩（每块64字节）
+    for (size_t i = 0; i < padded_len; i += SM3_BLOCK_SIZE) {
+        sm3_compress(IV, padded_input + i);
+    }
+
+    // 步骤4：释放填充内存，将IV转换为哈希值（大端字节流）
+    free(padded_input);
+    for (int i = 0; i < SM3_IV_SIZE; i++) {
+        hash[i * 4] = (IV[i] >> 24) & 0xFF;  // 32位字的高位字节
+        hash[i * 4 + 1] = (IV[i] >> 16) & 0xFF;
+        hash[i * 4 + 2] = (IV[i] >> 8) & 0xFF;
+        hash[i * 4 + 3] = IV[i] & 0xFF;      // 32位字的低位字节
+    }
+
+    return hash;
+}
