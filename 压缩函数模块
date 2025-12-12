@@ -1,0 +1,44 @@
+// 压缩函数模块：64轮迭代更新IV
+void sm3_compress(uint32_t IV[SM3_IV_SIZE], const uint8_t* block) {
+    uint32_t W[68] = { 0 };   // 68个32位扩展字
+    uint32_t W1[64] = { 0 };  // 64个32位扩展字
+    sm3_expand(block, W, W1);
+
+    // 初始化8个工作变量
+    uint32_t A = IV[0], B = IV[1], C = IV[2], D = IV[3];
+    uint32_t E = IV[4], F = IV[5], G = IV[6], H = IV[7];
+
+    // 64轮迭代（分前16轮和后48轮）
+    for (int j = 0; j < 64; j++) {
+        uint32_t T = (j <= 15) ? 0x79cc4519 : 0x7a879d8a;  // 常量T_j
+        uint32_t SS1, SS2, TT1, TT2;
+
+        // 计算SS1和SS2
+        SS1 = sm3_rotl(sm3_rotl(A, 12) + E + sm3_rotl(T, j), 7);
+        SS2 = SS1 ^ sm3_rotl(A, 12);
+
+        // 计算TT1和TT2
+        TT1 = sm3_FF(A, B, C, j) + D + SS2 + W1[j];
+        TT2 = sm3_GG(E, F, G, j) + H + SS1 + W[j];
+
+        // 更新工作变量（严格遵循顺序）
+        D = C;
+        C = sm3_rotl(B, 9);
+        B = A;
+        A = TT1;
+        H = G;
+        G = sm3_rotl(F, 19);
+        F = E;
+        E = sm3_P0(TT2);
+    }
+
+    // 迭代后与原IV异或，得到新IV
+    IV[0] ^= A;
+    IV[1] ^= B;
+    IV[2] ^= C;
+    IV[3] ^= D;
+    IV[4] ^= E;
+    IV[5] ^= F;
+    IV[6] ^= G;
+    IV[7] ^= H;
+}
