@@ -1,0 +1,48 @@
+#pragma once
+#ifndef SM3_H
+#define SM3_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+// SM3算法核心常量（GM/T 0004-2012标准）
+#define SM3_IV_SIZE 8       // 初始链接变量个数（8个32位字）
+#define SM3_BLOCK_SIZE 64   // 分组大小（512bit = 64byte）
+#define SM3_HASH_SIZE 32    // 哈希输出长度（256bit = 32byte）
+
+// 初始链接变量IV（十六进制，大端序存储）
+extern const uint32_t SM3_IV[SM3_IV_SIZE];
+
+// 循环左移函数（32位字）
+uint32_t sm3_rotl(uint32_t x, int n);
+
+// 置换函数P0（X ^ (X <<< 9) ^ (X <<< 17)）
+uint32_t sm3_P0(uint32_t x);
+
+// 置换函数P1（X ^ (X <<< 15) ^ (X <<< 23)）
+uint32_t sm3_P1(uint32_t x);
+
+// 布尔函数FF（j=0-15用FF1，j=16-63用FF2）
+uint32_t sm3_FF(uint32_t X, uint32_t Y, uint32_t Z, int j);
+
+// 布尔函数GG（j=0-15用GG1，j=16-63用GG2）
+uint32_t sm3_GG(uint32_t X, uint32_t Y, uint32_t Z, int j);
+
+// 消息填充模块：输入→填充后字节流（需调用者free输出内存）
+// input：原始输入字节流；input_len：输入长度（字节）；output：填充后输出；output_len：输出长度（字节）
+void sm3_pad(const uint8_t* input, size_t input_len, uint8_t** output, size_t* output_len);
+
+// 分组扩展模块：512bit分组→68个W字 + 64个W'字
+// block：单个512bit分组（64byte）；W：68个32位扩展字；W1：64个32位扩展字
+void sm3_expand(const uint8_t* block, uint32_t W[68], uint32_t W1[64]);
+
+// 压缩函数模块：IV + 单个分组→新IV
+// IV：当前链接变量（8个32位字）；block：单个512bit分组（64byte）
+void sm3_compress(uint32_t IV[SM3_IV_SIZE], const uint8_t* block);
+
+// SM3哈希主函数（符合任务书接口要求）
+// input：输入字节流；input_len：输入长度（字节）；hash_len：输出哈希长度（固定32）
+// 返回：32字节哈希值（需调用者free释放）
+uint8_t* sm3_hash(const uint8_t* input, size_t input_len, size_t* hash_len);
+
+#endif // SM3_H
